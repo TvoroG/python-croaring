@@ -103,8 +103,10 @@ void roaring_bitmap_flip_inplace(roaring_bitmap_t *x1, uint64_t range_start,uint
 bool roaring_bitmap_run_optimize(roaring_bitmap_t *r);
 size_t roaring_bitmap_shrink_to_fit(roaring_bitmap_t *r);
 roaring_bitmap_t *roaring_bitmap_deserialize(const void *buf);
+roaring_bitmap_t *roaring_bitmap_portable_deserialize(const char *buf);
 bool roaring_bitmap_is_empty(const roaring_bitmap_t *ra);
 size_t roaring_bitmap_serialize(const roaring_bitmap_t *ra, char *buf);
+size_t roaring_bitmap_portable_serialize(const roaring_bitmap_t *r, char *buf);
 size_t roaring_bitmap_size_in_bytes(const roaring_bitmap_t *ra);
 bool roaring_bitmap_equals(const roaring_bitmap_t *ra1, const roaring_bitmap_t *ra2);
 uint64_t roaring_bitmap_rank(const roaring_bitmap_t *bm, uint32_t x);
@@ -473,6 +475,14 @@ class BitSet(object):
             return None
         return ffi.buffer(out)[:size]
 
+    def portable_dumps(self):
+        buf_size = lib.roaring_bitmap_size_in_bytes(self._croaring)
+        out = ffi.new('char[%d]' % (buf_size))
+        size = lib.roaring_bitmap_portable_serialize(self._croaring, out)
+        if size < 0:
+            return None
+        return ffi.buffer(out)[:size]
+
     def clear(self):
         lib.roaring_bitmap_clear(self._croaring)
 
@@ -480,6 +490,12 @@ class BitSet(object):
     def loads(cls, buf):
         inbuf = ffi.new('char[%d]'%(len(buf)), buf)
         _croaring = lib.roaring_bitmap_deserialize(inbuf)
+        return cls(croaring = _croaring)
+
+    @classmethod
+    def portable_loads(cls, buf):
+        inbuf = ffi.new('char[%d]'%(len(buf)), buf)
+        _croaring = lib.roaring_bitmap_portable_deserialize(inbuf)
         return cls(croaring = _croaring)
 
     def minimum(self):
