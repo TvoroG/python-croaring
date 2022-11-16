@@ -108,6 +108,7 @@ bool roaring_bitmap_is_empty(const roaring_bitmap_t *ra);
 size_t roaring_bitmap_serialize(const roaring_bitmap_t *ra, char *buf);
 size_t roaring_bitmap_portable_serialize(const roaring_bitmap_t *r, char *buf);
 size_t roaring_bitmap_size_in_bytes(const roaring_bitmap_t *ra);
+size_t roaring_bitmap_portable_size_in_bytes(const roaring_bitmap_t *r);
 bool roaring_bitmap_equals(const roaring_bitmap_t *ra1, const roaring_bitmap_t *ra2);
 uint64_t roaring_bitmap_rank(const roaring_bitmap_t *bm, uint32_t x);
 uint32_t roaring_bitmap_minimum(const roaring_bitmap_t *bm);
@@ -476,7 +477,7 @@ class BitSet(object):
         return ffi.buffer(out)[:size]
 
     def portable_dumps(self):
-        buf_size = lib.roaring_bitmap_size_in_bytes(self._croaring)
+        buf_size = lib.roaring_bitmap_portable_size_in_bytes(self._croaring)
         out = ffi.new('char[%d]' % (buf_size))
         size = lib.roaring_bitmap_portable_serialize(self._croaring, out)
         if size < 0:
