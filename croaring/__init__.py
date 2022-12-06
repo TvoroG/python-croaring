@@ -1,4 +1,3 @@
-# -*- coding: utf8 -*-
 from __future__ import absolute_import, division, print_function, with_statement
 import sys
 import os
@@ -129,6 +128,9 @@ bool croaring_get_elt(const roaring_bitmap_t *ra, int64_t index, uint32_t *ans);
 roaring_bitmap_t *croaring_union(const roaring_bitmap_t **x, size_t size , bool using_heap);
 roaring_bitmap_t *croaring_intersection(const roaring_bitmap_t **x, size_t size);
 roaring_bitmap_t *croaring_get_slice(const roaring_bitmap_t*x, int sign , int64_t start, int64_t stop, int step);
+size_t roaring_bitmap_frozen_size_in_bytes(const roaring_bitmap_t *r);
+void roaring_bitmap_frozen_serialize(const roaring_bitmap_t *r, char *buf);
+const roaring_bitmap_t *roaring_bitmap_frozen_view(const char *buf, size_t length);
 """
 
 SOURCE = """
@@ -483,6 +485,12 @@ class BitSet(object):
         if size < 0:
             return None
         return ffi.buffer(out)[:size]
+
+    def frozen_dumps(self):
+        buf_size = lib.roaring_bitmap_frozen_size_in_bytes(self._croaring)
+        out = ffi.new('char[%d]' % (buf_size))
+        lib.roaring_bitmap_frozen_serialize(self._croaring, out)
+        return ffi.buffer(out)[:buf_size]
 
     def clear(self):
         lib.roaring_bitmap_clear(self._croaring)
