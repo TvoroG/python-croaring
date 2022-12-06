@@ -226,9 +226,9 @@ ffi.verifier = Verifier(ffi,
 lib = ffi.verifier.load_library()
 
 class BitSet(object):
-    def __init__(self, values=None, copy_on_write=False, croaring = None):
+    def __init__(self, values=None, croaring = None):
         if croaring:
-            assert values is None and not copy_on_write
+            assert values is None
             self._croaring = croaring
             return
         elif values is None:
@@ -251,15 +251,13 @@ class BitSet(object):
         else:
             self._croaring = lib.roaring_bitmap_create_with_capacity(0)
             self.update(values)
-        if not isinstance(values, self.__class__):
-            self._croaring.copy_on_write = copy_on_write
 
     def update(self, *all_values):
         for values in all_values:
             if isinstance(values, self.__class__):
                 self |= values
             elif PY3 and isinstance(values, range):
-                self |= self.__class__(values, copy_on_write=self.copy_on_write)
+                self |= self.__class__(values)
             elif isinstance(values, array.array):
                 buffer = ffi.cast("uint32_t*", ffi.from_buffer(values))
                 lib.roaring_bitmap_add_many(self._croaring, len(values), buffer)
@@ -271,10 +269,7 @@ class BitSet(object):
             if isinstance(values, self.__class__):
                 self &= values
             else:
-                self &= self.__class__(values, copy_on_write=self.copy_on_write)
-    @property
-    def copy_on_write(self):
-        return self._croaring.copy_on_write
+                self &= self.__class__(values)
 
     def __repr__(self):
         return str(self)
