@@ -147,6 +147,8 @@ void roaring_free_uint32_iterator(roaring_uint32_iterator_t *it);
 
 uint32_t roaring_read_uint32_iterator(roaring_uint32_iterator_t *it,
                                       uint32_t* buf, uint32_t count);
+
+void *malloc_aligned(size_t size, size_t alignment);
 """
 
 SOURCE = """
