@@ -215,29 +215,6 @@ roaring_bitmap_t *croaring_intersection(const roaring_bitmap_t **x, size_t size)
 
     return roaring_bitmap_and_many(size, x);
 }
-
-roaring_bitmap_t *croaring_get_slice(const roaring_bitmap_t* x, int sign , int64_t start, int64_t stop, int step){
-    if((sign > 0 && start >= stop) || (sign < 0 && start <= stop))
-        return roaring_bitmap_create();
-    uint32_t first_elt;
-    uint32_t last_elt;
-    roaring_bitmap_t * _croaring = NULL;
-    if( abs(step) == 1){
-        if(sign > 0){
-            if( (!croaring_get_elt( x, start , &first_elt)) || (!croaring_get_elt( x, stop - sign , &last_elt)) )
-                return roaring_bitmap_create();
-        }else{
-            if( (!croaring_get_elt( x, stop - sign , &first_elt)) || (!croaring_get_elt( x, start, &last_elt)) )
-                return roaring_bitmap_create();
-        }
-        _croaring = roaring_bitmap_from_range(first_elt, last_elt + 1, abs(step));
-        roaring_bitmap_and_inplace(_croaring, x);
-        _croaring->copy_on_write = x->copy_on_write;
-        return _croaring;
-    }else{
-        return NULL;
-    }
-}
 """
 ffi.cdef(CDEF)
 ffi.verifier = Verifier(ffi,
