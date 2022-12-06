@@ -153,7 +153,7 @@ SOURCE = """
 #include <roaring.c>
 roaring_bitmap_t *roaring_bitmap_and_many(size_t number, const roaring_bitmap_t **x) {
     if (number == 0) {
-        return roaring_bitmap_create();
+        return roaring_bitmap_create_with_capacity(0);
     }
     if (number == 1) {
         return roaring_bitmap_copy(x[0]);
@@ -185,7 +185,7 @@ bool croaring_get_elt(const roaring_bitmap_t *ra, int64_t index, uint32_t *ans){
 
 roaring_bitmap_t *croaring_union(const roaring_bitmap_t **x, size_t size , bool using_heap) {
     if (size == 0) {
-        return roaring_bitmap_create();
+        return roaring_bitmap_create_with_capacity(0);
     }
     if (size == 1) {
         return roaring_bitmap_copy(x[0]);
@@ -202,7 +202,7 @@ roaring_bitmap_t *croaring_union(const roaring_bitmap_t **x, size_t size , bool 
 
 roaring_bitmap_t *croaring_intersection(const roaring_bitmap_t **x, size_t size) {
     if (size == 0) {
-        return roaring_bitmap_create();
+        return roaring_bitmap_create_with_capacity(0);
     }
 
     if (size == 1) {
@@ -232,7 +232,7 @@ class BitSet(object):
             self._croaring = croaring
             return
         elif values is None:
-            self._croaring = lib.roaring_bitmap_create()
+            self._croaring = lib.roaring_bitmap_create_with_capacity(0)
         elif isinstance(values, self.__class__):
             self._croaring = lib.roaring_bitmap_copy(values._croaring)
         elif PY3 and isinstance(values, range):
@@ -241,7 +241,7 @@ class BitSet(object):
                 values = range(min(values), max(values)+1, -step)
                 _, (start, stop, step) = values.__reduce__()
             if start >= stop:
-                self._croaring = lib.roaring_bitmap_create()
+                self._croaring = lib.roaring_bitmap_create_with_capacity(0)
             else:
                 self._croaring = lib.roaring_bitmap_from_range(start, stop, step)
         elif isinstance(values, array.array):
@@ -249,7 +249,7 @@ class BitSet(object):
             buffer = ffi.cast("uint32_t*", address)
             self._croaring = lib.roaring_bitmap_of_ptr(size, buffer)
         else:
-            self._croaring = lib.roaring_bitmap_create()
+            self._croaring = lib.roaring_bitmap_create_with_capacity(0)
             self.update(values)
         if not isinstance(values, self.__class__):
             self._croaring.copy_on_write = copy_on_write
