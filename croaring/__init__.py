@@ -36,11 +36,11 @@ typedef struct roaring_array_s {
     void **containers;
     uint16_t *keys;
     uint8_t *typecodes;
+    uint8_t flags;
 } roaring_array_t;
 
 typedef struct roaring_bitmap_s {
     roaring_array_t high_low_container;
-    bool copy_on_write;
 } roaring_bitmap_t;
 
 typedef struct roaring_uint32_iterator_s {
@@ -48,7 +48,6 @@ typedef struct roaring_uint32_iterator_s {
     int32_t container_index;
     int32_t in_container_index;
     int32_t run_index;
-    uint32_t in_run_index;
     uint32_t current_value;
     bool has_value;
     const void *container;
@@ -56,81 +55,98 @@ typedef struct roaring_uint32_iterator_s {
     uint32_t highbits;
 } roaring_uint32_iterator_t;
 
-typedef struct roaring_statistics_s {
-    uint32_t n_containers;
-    uint32_t n_array_containers;
-    uint32_t n_run_containers;
-    uint32_t n_bitset_containers;
-    uint32_t n_values_array_containers;
-    uint32_t n_values_run_containers;
-    uint32_t n_values_bitset_containers;
-    uint32_t n_bytes_array_containers;
-    uint32_t n_bytes_run_containers;
-    uint32_t n_bytes_bitset_containers;
-    uint32_t max_value;
-    uint32_t min_value;
-    uint64_t sum_value;
-    uint64_t cardinality;
-} roaring_statistics_t;
+typedef struct roaring_bulk_context_s {
+    void *container;
+    int idx;
+    uint16_t key;
+    uint8_t typecode;
+} roaring_bulk_context_t;
 
-roaring_bitmap_t *roaring_bitmap_create();
-roaring_bitmap_t *roaring_bitmap_from_range(uint32_t min, uint32_t max,uint32_t step);
 roaring_bitmap_t *roaring_bitmap_create_with_capacity(uint32_t cap);
-roaring_bitmap_t *roaring_bitmap_of_ptr(size_t n_args, const uint32_t *vals);
-void roaring_bitmap_printf_describe(const roaring_bitmap_t *ra);
-roaring_bitmap_t *roaring_bitmap_of(size_t n, ...);
-roaring_bitmap_t *roaring_bitmap_copy(const roaring_bitmap_t *r);
-void roaring_bitmap_printf(const roaring_bitmap_t *ra);
-void roaring_bitmap_free(roaring_bitmap_t *r);
-void roaring_bitmap_add(roaring_bitmap_t *r, uint32_t val);
-uint64_t roaring_bitmap_get_cardinality(const roaring_bitmap_t *ra);
+
+void roaring_bitmap_free(const roaring_bitmap_t *r);
+
+void roaring_bitmap_add(roaring_bitmap_t *r, uint32_t x);
+
+void roaring_bitmap_add_many(roaring_bitmap_t *r, size_t n_args,
+                             const uint32_t *vals);
+
+void roaring_bitmap_remove(roaring_bitmap_t *r, uint32_t x);
+
+void roaring_bitmap_remove_many(roaring_bitmap_t *r, size_t n_args,
+                                const uint32_t *vals);
+
 bool roaring_bitmap_contains(const roaring_bitmap_t *r, uint32_t val);
-void roaring_bitmap_remove(roaring_bitmap_t *r, uint32_t val);
-roaring_bitmap_t *roaring_bitmap_or(const roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-void roaring_bitmap_or_inplace(roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-roaring_bitmap_t *roaring_bitmap_and(const roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-void roaring_bitmap_add_many(roaring_bitmap_t *r, size_t n_args, const uint32_t *vals);
-void roaring_bitmap_and_inplace(roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-roaring_bitmap_t *roaring_bitmap_xor(const roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-void roaring_bitmap_xor_inplace(roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-roaring_bitmap_t *roaring_bitmap_andnot(const roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-void roaring_bitmap_andnot_inplace(roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-roaring_bitmap_t *roaring_bitmap_or_many_heap(uint32_t number,const roaring_bitmap_t **x);
-roaring_bitmap_t *roaring_bitmap_or_many(uint32_t number,const roaring_bitmap_t **x);
-roaring_bitmap_t *roaring_bitmap_flip(const roaring_bitmap_t *x1, uint64_t range_start, uint64_t range_end);
-void roaring_bitmap_flip_inplace(roaring_bitmap_t *x1, uint64_t range_start,uint64_t range_end);
-bool roaring_bitmap_run_optimize(roaring_bitmap_t *r);
-size_t roaring_bitmap_shrink_to_fit(roaring_bitmap_t *r);
-roaring_bitmap_t *roaring_bitmap_deserialize(const void *buf);
-roaring_bitmap_t *roaring_bitmap_portable_deserialize(const char *buf);
-bool roaring_bitmap_is_empty(const roaring_bitmap_t *ra);
-size_t roaring_bitmap_serialize(const roaring_bitmap_t *ra, char *buf);
-size_t roaring_bitmap_portable_serialize(const roaring_bitmap_t *r, char *buf);
-size_t roaring_bitmap_size_in_bytes(const roaring_bitmap_t *ra);
+
+uint64_t roaring_bitmap_get_cardinality(const roaring_bitmap_t *r);
+
 size_t roaring_bitmap_portable_size_in_bytes(const roaring_bitmap_t *r);
-bool roaring_bitmap_equals(const roaring_bitmap_t *ra1, const roaring_bitmap_t *ra2);
-uint64_t roaring_bitmap_rank(const roaring_bitmap_t *bm, uint32_t x);
-uint32_t roaring_bitmap_minimum(const roaring_bitmap_t *bm);
-uint32_t roaring_bitmap_maximum(const roaring_bitmap_t *bm);
-bool roaring_bitmap_select(const roaring_bitmap_t *bm, uint32_t rank, uint32_t *element);
-bool roaring_bitmap_intersect(const roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-bool roaring_bitmap_is_subset(const roaring_bitmap_t *ra1,const roaring_bitmap_t *ra2);
-bool roaring_bitmap_is_strict_subset(const roaring_bitmap_t *ra1,const roaring_bitmap_t *ra2);
-roaring_uint32_iterator_t *roaring_create_iterator(const roaring_bitmap_t *ra);
-bool roaring_advance_uint32_iterator(roaring_uint32_iterator_t *it);
-void roaring_free_uint32_iterator(roaring_uint32_iterator_t *it);
-void roaring_bitmap_clear(roaring_bitmap_t *ra);
-void roaring_bitmap_to_uint32_array(const roaring_bitmap_t *ra, uint32_t *ans);
-double roaring_bitmap_jaccard_index(const roaring_bitmap_t *x1, const roaring_bitmap_t *x2);
-void roaring_bitmap_statistics(const roaring_bitmap_t *ra, roaring_statistics_t *stat);
-roaring_bitmap_t *roaring_bitmap_and_many(size_t number, const roaring_bitmap_t **x);
-bool croaring_get_elt(const roaring_bitmap_t *ra, int64_t index, uint32_t *ans);
-roaring_bitmap_t *croaring_union(const roaring_bitmap_t **x, size_t size , bool using_heap);
-roaring_bitmap_t *croaring_intersection(const roaring_bitmap_t **x, size_t size);
-roaring_bitmap_t *croaring_get_slice(const roaring_bitmap_t*x, int sign , int64_t start, int64_t stop, int step);
+
+bool roaring_bitmap_run_optimize(roaring_bitmap_t *r);
+
+size_t roaring_bitmap_shrink_to_fit(roaring_bitmap_t *r);
+
+size_t roaring_bitmap_portable_serialize(const roaring_bitmap_t *r, char *buf);
+
+roaring_bitmap_t *roaring_bitmap_of_ptr(size_t n_args, const uint32_t *vals);
+
+void roaring_bitmap_to_uint32_array(const roaring_bitmap_t *r, uint32_t *ans);
+
+bool roaring_bitmap_equals(const roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+roaring_bitmap_t *roaring_bitmap_or(const roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+void roaring_bitmap_or_inplace(roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+roaring_bitmap_t *roaring_bitmap_or_many(size_t number, const roaring_bitmap_t **rs);
+
+roaring_bitmap_t *roaring_bitmap_or_many_heap(uint32_t number, const roaring_bitmap_t **rs);
+
+roaring_bitmap_t *roaring_bitmap_and(const roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+void roaring_bitmap_and_inplace(roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+roaring_bitmap_t *roaring_bitmap_andnot(const roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+uint64_t roaring_bitmap_andnot_cardinality(const roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+void roaring_bitmap_andnot_inplace(roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+void roaring_bitmap_xor_inplace(roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+roaring_bitmap_t *roaring_bitmap_portable_deserialize_safe(const char *buf, size_t maxbytes);
+
+bool roaring_bitmap_is_subset(const roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+bool roaring_bitmap_intersect(const roaring_bitmap_t *r1, const roaring_bitmap_t *r2);
+
+
+void roaring_bitmap_add_bulk(roaring_bitmap_t *r, roaring_bulk_context_t *context, uint32_t val);
+
+bool roaring_bitmap_contains_bulk(const roaring_bitmap_t *r,
+                                  roaring_bulk_context_t *context,
+                                  uint32_t val);
+
+
 size_t roaring_bitmap_frozen_size_in_bytes(const roaring_bitmap_t *r);
+
 void roaring_bitmap_frozen_serialize(const roaring_bitmap_t *r, char *buf);
+
 const roaring_bitmap_t *roaring_bitmap_frozen_view(const char *buf, size_t length);
+
+
+roaring_uint32_iterator_t *roaring_create_iterator(const roaring_bitmap_t *r);
+
+bool roaring_advance_uint32_iterator(roaring_uint32_iterator_t *it);
+
+bool roaring_previous_uint32_iterator(roaring_uint32_iterator_t *it);
+
+bool roaring_move_uint32_iterator_equalorlarger(roaring_uint32_iterator_t *it, uint32_t val);
+
+void roaring_free_uint32_iterator(roaring_uint32_iterator_t *it);
+
+uint32_t roaring_read_uint32_iterator(roaring_uint32_iterator_t *it,
+                                      uint32_t* buf, uint32_t count);
 """
 
 SOURCE = """
