@@ -215,6 +215,19 @@ roaring_bitmap_t *croaring_intersection(const roaring_bitmap_t **x, size_t size)
 
     return roaring_bitmap_and_many(size, x);
 }
+
+size_t
+small_align(size_t size, size_t alignment)
+{
+	return (size - 1 + alignment) & ~(alignment - 1);
+}
+
+void *
+malloc_aligned(size_t size, size_t alignment)
+{
+	void *ptr = malloc(size + alignment - 1);
+	return (void *)small_align((uintptr_t)ptr, alignment);
+}
 """
 ffi.cdef(CDEF)
 ffi.verifier = Verifier(ffi,
@@ -493,6 +506,15 @@ class BitSet(object):
     def portable_loads(cls, buf):
         inbuf = ffi.new('char[%d]'%(len(buf)), buf)
         _croaring = lib.roaring_bitmap_portable_deserialize(inbuf)
+        return cls(croaring = _croaring)
+
+    @classmethod
+    def frozen_loads(cls, s):
+        size = len(s)
+        buf = lib.malloc_aligned(size, 32)
+        inbuf = ffi.cast('char *', buf)
+        ffi.memmove(inbuf, s, size)
+        _croaring = lib.roaring_bitmap_frozen_view(inbuf, size)
         return cls(croaring = _croaring)
 
     def minimum(self):
