@@ -505,7 +505,7 @@ class BitSet(object):
     @classmethod
     def portable_loads(cls, buf):
         inbuf = ffi.new('char[%d]'%(len(buf)), buf)
-        _croaring = lib.roaring_bitmap_portable_deserialize(inbuf)
+        _croaring = lib.roaring_bitmap_portable_deserialize_safe(inbuf, len(buf))
         return cls(croaring = _croaring)
 
     @classmethod
